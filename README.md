@@ -17,7 +17,7 @@ version: "3"
 services:
   pihole:
     container_name: pihole
-    image: pihole/pihole:latest
+    image: badboybeyer/pihole:latest
     ports:
       - "53:53/tcp"
       - "53:53/udp"
@@ -34,6 +34,12 @@ services:
     #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
     cap_add:
       - NET_ADMIN
+    restart: unless-stopped
+  dnscrypt-proxy:
+    container_name: dnscrypt-proxy
+    image: klutchell/dnscrypt-proxy
+    volumes:
+        - "./dnscrypt-proxy/:/config"
     restart: unless-stopped
 ```
 2. Run `docker-compose up -d` to build and start pi-hole
@@ -102,7 +108,6 @@ There are other environment variables if you want to customize various things in
 | Variable | Default | Value | Description |
 | -------- | ------- | ----- | ---------- |
 | `ADMIN_EMAIL` | unset | email address | Set an administrative contact address for the Block Page |
-| `PIHOLE_DNS_` |  `8.8.8.8;8.8.4.4` | IPs delimited by `;` | Upstream DNS server(s) for Pi-hole to forward queries to, seperated by a semicolon <br/> (supports non-standard ports with `#[port number]`) e.g `127.0.0.1#5053;8.8.8.8;8.8.4.4` |
 | `DNSSEC` | `false` | `<"true"\|"false">` | Enable DNSSEC support |
 | `DNS_BOGUS_PRIV` | `true` |`<"true"\|"false">`| Never forward reverse lookups for private ranges |
 | `DNS_FQDN_REQUIRED` | `true` | `<"true"\|"false">`| Never forward non-FQDNs |
@@ -151,8 +156,7 @@ While these may still work, they are likely to be removed in a future version. W
 | `CONDITIONAL_FORWARDING_IP` | If conditional forwarding is enabled, set the IP of the local network router | `REV_SERVER_TARGET` |
 | `CONDITIONAL_FORWARDING_DOMAIN` | If conditional forwarding is enabled, set the domain of the local network router | `REV_SERVER_DOMAIN` |
 | `CONDITIONAL_FORWARDING_REVERSE` | If conditional forwarding is enabled, set the reverse DNS of the local network router (e.g. `0.168.192.in-addr.arpa`) | `REV_SERVER_CIDR` |
-| `DNS1` | Primary upstream DNS provider, default is google DNS | `PIHOLE_DNS_` |
-| `DNS2` | Secondary upstream DNS provider, default is google DNS, `no` if only one DNS should used | `PIHOLE_DNS_` |
+
 
 To use these env vars in docker run format style them like: `-e DNS1=1.1.1.1`
 
