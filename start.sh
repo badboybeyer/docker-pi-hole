@@ -95,49 +95,17 @@ if [ -z "$REV_SERVER" ];then
     [ -n "${CONDITIONAL_FORWARDING_REVERSE}" ] && change_setting "CONDITIONAL_FORWARDING_REVERSE" "$CONDITIONAL_FORWARDING_REVERSE"
 fi
 
-if [ -z "${PIHOLE_DNS_}" ]; then
-    # For backward compatibility, if DNS1 and/or DNS2 are set, but PIHOLE_DNS_ is not, convert them to
-    # a semi-colon delimited string and store in PIHOLE_DNS_
-    # They are not used anywhere if PIHOLE_DNS_ is set already
-    [ -n "${DNS1}" ] && echo "Converting DNS1 to PIHOLE_DNS_" && PIHOLE_DNS_="$DNS1"
-    [[ -n "${DNS2}" && "${DNS2}" != "no" ]] && echo "Converting DNS2 to PIHOLE_DNS_" && PIHOLE_DNS_="$PIHOLE_DNS_;$DNS2"
-fi
+setupVarsDNS="$(grep 'PIHOLE_DNS_' /etc/pihole/setupVars.conf || true)"
 
-# Parse the PIHOLE_DNS variable, if it exists, and apply upstream servers to Pi-hole config
-if [ -n "${PIHOLE_DNS_}" ]; then
-    echo "Setting DNS servers based on PIHOLE_DNS_ variable"
-    # Split into an array (delimited by ;)
-    PIHOLE_DNS_ARR=(${PIHOLE_DNS_//;/ })
-    count=1
-    valid_entries=0
-    for i in "${PIHOLE_DNS_ARR[@]}"; do
-        if valid_ip "$i" || valid_ip6 "$i" ; then
-          change_setting "PIHOLE_DNS_$count" "$i"
-          ((count=count+1))
-          ((valid_entries=valid_entries+1))
-        else
-          echo "Invalid IP detected in PIHOLE_DNS_: ${i}"
-        fi
-    done
+dnsip="$(dig +short dnscrypt-proxy)"
+echo "Configuring dnscrypt-proxy as DNS server: ${dnsip}#5053"
+change_setting "PIHOLE_DNS_1" "$dnsip"
 
-    if [ $valid_entries -eq 0 ]; then
-      echo "No Valid IPs dectected in PIHOLE_DNS_. Aborting"
-      exit 1
-    fi
-else
-    # Environment variable has not been set, but there may be existing values in an existing setupVars.conf
-    # if this is the case, we do not want to overwrite these with the defaults of 8.8.8.8 and 8.8.4.4
-    # Pi-hole can run with only one upstream configured, so we will just check for one.
-    setupVarsDNS="$(grep 'PIHOLE_DNS_' /etc/pihole/setupVars.conf || true)"
-
-    if [ -z "${setupVarsDNS}" ]; then
-      echo "Configuring default DNS servers: 8.8.8.8, 8.8.4.4"
-      change_setting "PIHOLE_DNS_1" "8.8.8.8"
-      change_setting "PIHOLE_DNS_2" "8.8.4.4"
-    else
-      echo "Existing DNS servers detected in setupVars.conf. Leaving them alone"
-    fi
-fi
+# remove extra dns variables
+grep 'PIHOLE_DNS_' /etc/pihole/setupVars.conf | \
+    grep -v PIHOLE_DNS_1 | \
+    awk -F= '{print$1}' | \
+    xargs -n1 delete_setting
 
 # Parse the WEBTHEME variable, if it exists, and set the selected theme if it is one of the supported values.
 # If an invalid theme name was supplied, setup WEBTHEME to use the default-light theme.
