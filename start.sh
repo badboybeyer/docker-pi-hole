@@ -99,13 +99,12 @@ setupVarsDNS="$(grep 'PIHOLE_DNS_' /etc/pihole/setupVars.conf || true)"
 
 dnsip="$(dig +short dnscrypt-proxy)"
 echo "Configuring dnscrypt-proxy as DNS server: ${dnsip}#5053"
-change_setting "PIHOLE_DNS_1" "$dnsip"
+change_setting "PIHOLE_DNS_1" "${dnsip}#5053"
 
 # remove extra dns variables
-grep 'PIHOLE_DNS_' /etc/pihole/setupVars.conf | \
-    grep -v PIHOLE_DNS_1 | \
-    awk -F= '{print$1}' | \
-    xargs -n1 delete_setting
+for extra_dns_var in $(grep 'PIHOLE_DNS_' /etc/pihole/setupVars.conf | grep -v PIHOLE_DNS_1 | awk -F= '{print$1}' ); do
+    delete_setting $extra_dns_var
+done
 
 # Parse the WEBTHEME variable, if it exists, and set the selected theme if it is one of the supported values.
 # If an invalid theme name was supplied, setup WEBTHEME to use the default-light theme.
